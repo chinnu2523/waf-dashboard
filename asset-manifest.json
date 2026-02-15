@@ -1,0 +1,15 @@
+{
+  "files": {
+    "main.css": "/waf-dashboard/static/css/main.e6c13ad2.css",
+    "main.js": "/waf-dashboard/static/js/main.e3e909e2.js",
+    "static/js/453.2a8a1c4b.chunk.js": "/waf-dashboard/static/js/453.2a8a1c4b.chunk.js",
+    "index.html": "/waf-dashboard/index.html",
+    "main.e6c13ad2.css.map": "/waf-dashboard/static/css/main.e6c13ad2.css.map",
+    "main.e3e909e2.js.map": "/waf-dashboard/static/js/main.e3e909e2.js.map",
+    "453.2a8a1c4b.chunk.js.map": "/waf-dashboard/static/js/453.2a8a1c4b.chunk.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.e6c13ad2.css",
+    "static/js/main.e3e909e2.js"
+  ]
+}
