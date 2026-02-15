@@ -1,5 +1,6 @@
 {
   "name": "waf-dashboard",
+  "homepage": "https://chinnu2523.github.io/waf-dashboard",
   "version": "0.1.0",
   "private": true,
   "dependencies": {
@@ -7,12 +8,18 @@
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^13.5.0",
+    "axios": "^1.13.5",
+    "gh-pages": "^6.3.0",
+    "lucide-react": "^0.564.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-scripts": "5.0.1",
+    "recharts": "^3.7.0",
     "web-vitals": "^2.1.4"
   },
   "scripts": {
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d build",
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
