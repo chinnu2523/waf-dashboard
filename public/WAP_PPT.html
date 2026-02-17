@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Smart WAF – Review 1</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: #e2e8f0; overflow: hidden; }
+
+  /* Slide container */
+  .slide { display: none; width: 100vw; height: 100vh; padding: 48px 64px; position: relative; flex-direction: column; justify-content: center; background: linear-gradient(135deg,#020617 0%,#0f172a 60%,#0c1a2e 100%); }
+  .slide.active { display: flex; }
+
+  /* Decorative corner */
+  .slide::before { content:''; position:absolute; top:0; left:0; width:6px; height:100%; background:linear-gradient(180deg,#3b82f6,#a855f7); }
+  .slide::after  { content:''; position:absolute; bottom:0; left:0; width:100%; height:4px; background:linear-gradient(90deg,#3b82f6,#a855f7,#22c55e); }
+
+  /* Slide number */
+  .slide-num { position:absolute; bottom:18px; right:32px; font-size:13px; color:#475569; }
+
+  /* Title slide */
+  .title-badge { display:inline-block; padding:6px 18px; border-radius:20px; background:rgba(59,130,246,0.15); border:1px solid rgba(59,130,246,0.4); color:#93c5fd; font-size:13px; margin-bottom:20px; }
+  .title-main  { font-size:52px; font-weight:900; line-height:1.1; margin-bottom:16px; background:linear-gradient(90deg,#f1f5f9,#93c5fd); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+  .title-sub   { font-size:20px; color:#64748b; margin-bottom:36px; }
+  .title-meta  { display:flex; gap:32px; }
+  .meta-item   { display:flex; flex-direction:column; gap:4px; }
+  .meta-label  { font-size:11px; color:#475569; text-transform:uppercase; letter-spacing:1px; }
+  .meta-value  { font-size:15px; color:#93c5fd; font-weight:600; }
+
+  /* Section header */
+  .sec-label { font-size:12px; color:#3b82f6; text-transform:uppercase; letter-spacing:2px; margin-bottom:10px; }
+  .sec-title { font-size:36px; font-weight:800; color:#f1f5f9; margin-bottom:32px; }
+
+  /* Cards */
+  .cards { display:flex; gap:16px; flex-wrap:wrap; }
+  .card  { flex:1; min-width:180px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:20px; }
+  .card.blue   { border-color:rgba(59,130,246,0.3);  background:rgba(59,130,246,0.07); }
+  .card.red    { border-color:rgba(239,68,68,0.3);   background:rgba(239,68,68,0.07); }
+  .card.green  { border-color:rgba(34,197,94,0.3);   background:rgba(34,197,94,0.07); }
+  .card.purple { border-color:rgba(168,85,247,0.3);  background:rgba(168,85,247,0.07); }
+  .card.yellow { border-color:rgba(234,179,8,0.3);   background:rgba(234,179,8,0.07); }
+  .card-icon   { font-size:28px; margin-bottom:10px; }
+  .card-title  { font-size:15px; font-weight:700; color:#f1f5f9; margin-bottom:6px; }
+  .card-text   { font-size:13px; color:#94a3b8; line-height:1.5; }
+  .card-num    { font-size:36px; font-weight:900; margin-bottom:4px; }
+
+  /* List */
+  .list { display:flex; flex-direction:column; gap:12px; }
+  .list-item { display:flex; align-items:flex-start; gap:14px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07); border-radius:10px; padding:14px 18px; }
+  .list-icon { font-size:22px; flex-shrink:0; }
+  .list-title { font-size:15px; font-weight:700; color:#f1f5f9; margin-bottom:3px; }
+  .list-desc  { font-size:13px; color:#94a3b8; }
+  .badge { display:inline-block; padding:2px 10px; border-radius:20px; font-size:11px; font-weight:700; margin-left:8px; }
+  .done    { background:#22c55e22; color:#22c55e; border:1px solid #22c55e44; }
+  .wip     { background:#eab30822; color:#eab308; border:1px solid #eab30844; }
+  .planned { background:#3b82f622; color:#3b82f6; border:1px solid #3b82f644; }
+
+  /* Table */
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th { background:rgba(59,130,246,0.2); color:#93c5fd; padding:10px 14px; text-align:left; font-weight:700; }
+  td { padding:9px 14px; border-bottom:1px solid rgba(255,255,255,0.06); color:#cbd5e1; }
+  tr:hover td { background:rgba(255,255,255,0.03); }
+
+  /* Code block */
+  .code { background:#020617; border:1px solid #1e293b; border-radius:10px; padding:16px 20px; font-family:'Courier New',monospace; font-size:13px; color:#4ade80; line-height:1.8; }
+  .code .red  { color:#f87171; }
+  .code .blue { color:#60a5fa; }
+  .code .gray { color:#475569; }
+
+  /* Two col layout */
+  .two-col { display:flex; gap:24px; align-items:flex-start; }
+  .col { flex:1; }
+
+  /* Progress bar */
+  .prog { margin-bottom:14px; }
+  .prog-label { display:flex; justify-content:space-between; font-size:13px; margin-bottom:6px; }
+  .prog-bar { height:8px; background:#1e293b; border-radius:4px; overflow:hidden; }
+  .prog-fill { height:100%; border-radius:4px; }
+
+  /* Architecture box */
+  .arch { display:flex; flex-direction:column; align-items:center; gap:0; }
+  .arch-box { padding:10px 28px; border-radius:10px; font-weight:700; font-size:14px; text-align:center; min-width:220px; }
+  .arch-arrow { font-size:22px; color:#475569; margin:2px 0; }
+  .arch-row { display:flex; gap:16px; justify-content:center; }
+
+  /* Nav buttons */
+  .nav { position:fixed; bottom:28px; left:50%; transform:translateX(-50%); display:flex; gap:12px; z-index:100; }
+  .nav button { padding:10px 28px; border-radius:8px; border:none; font-weight:700; font-size:14px; cursor:pointer; transition:all .2s; }
+  .btn-prev { background:#1e293b; color:#94a3b8; }
+  .btn-next { background:#3b82f6; color:#fff; }
+  .btn-prev:hover { background:#334155; }
+  .btn-next:hover { background:#2563eb; }
+  .nav-dots { display:flex; align-items:center; gap:6px; }
+  .dot { width:8px; height:8px; border-radius:50%; background:#1e293b; cursor:pointer; transition:all .2s; }
+  .dot.active { background:#3b82f6; width:22px; border-radius:4px; }
+</style>
+</head>
+<body>
+
+<!-- ─── SLIDE 1: Title ─────────────────────────────────────────── -->
+<div class="slide active">
+  <div class="title-badge">🛡️ Major Project — Review 1</div>
+  <div class="title-main">Smart Web Application<br/>Firewall (WAF)</div>
+  <div class="title-sub">Real-Time Attack Detection & Live Monitoring Dashboard</div>
+  <div class="title-meta">
+    <div class="meta-item"><span class="meta-label">Student</span><span class="meta-value">Chinnu2523</span></div>
+    <div class="meta-item"><span class="meta-label">Review Date</span><span class="meta-value">Feb 23 & 24, 2025</span></div>
+    <div class="meta-item"><span class="meta-label">Live Demo</span><span class="meta-value">chinnu2523.github.io/waf-dashboard</span></div>
+    <div class="meta-item"><span class="meta-label">Status</span><span class="meta-value" style="color:#22c55e">● On Track</span></div>
+  </div>
+  <div class="slide-num">1 / 10</div>
+</div>
+
+<!-- ─── SLIDE 2: Problem Statement ───────────────────────────────── -->
+<div class="slide">
+  <div class="sec-label">Problem Statement</div>
+  <div class="sec-title">Why Do We Need a WAF?</div>
+  <div class="cards">
+    <div class="card red"><div class="card-icon">💀</div><div class="card-num" style="color:#ef4444">43%</div><div class="card-title">Web App Attacks</div><div class="card-text">of all cyber attacks target web applications directly</div></div>
+    <div class="card yellow"><div class="card-icon">💰</div><div class="card-num" style="color:#eab308">$4.35M</div><div class="card-title">Average Breach Cost</div><div class="card-text">average cost of a single data breach in 2024</div></div>
+    <div class="card blue"><div class="card-icon">🌐</div><div class="card-num" style="color:#3b82f6">90%</div><div class="card-title">Vulnerable Apps</div><div class="card-text">of web applications have at least one vulnerability</div></div>
+    <div class="card purple"><div class="card-icon">🛡️</div><div class="card-num" style="color:#a855f7">$8.6B</div><div class="card-title">WAF Market Size</div><div class="card-text">global WAF market — every company needs one</div></div>
+  </div>
+  <div style="margin-top:24px; background:rgba(59,130,246,0.1); border:1px solid rgba(59,130,246,0.3); border-radius:12px; padding:18px 24px;">
+    <div style="font-size:14px; color:#93c5fd; font-weight:700; margin-bottom:6px;">🎯 Our Problem Statement</div>
+    <div style="font-size:14px; color:#cbd5e1; line-height:1.7;">"Web applications face constant threats from SQL Injection, XSS, Path Traversal, and DDoS attacks. Small companies cannot afford commercial WAFs. We need a free, intelligent, real-time WAF with live monitoring."</div>
+  </div>
+  <div class="slide-num">2 / 10</div>
+</div>
+
+<!-- ─── SLIDE 3: Solution ─────────────────────────────────────────── -->
+<div class="slide">
+  <div class="sec-label">Our Solution</div>
+  <div class="sec-title">Smart WAF — How It Works</div>
+  <div class="two-col">
+    <div class="col">
+      <div class="arch">
+        <div class="arch-box" style="background:rgba(59,130,246,0.15);border:1px solid #3b82f644;color:#93c5fd;">👤 User Request</div>
+        <div class="arch-arrow">↓</div>
+        <div class="arch-box" style="background:rgba(239,68,68,0.15);border:1px solid #ef444444;color:#fca5a5;">🛡️ WAF Middleware</div>
+        <div class="arch-arrow">↓</div>
+        <div class="arch-box" style="background:rgba(168,85,247,0.15);border:1px solid #a855f744;color:#d8b4fe;font-size:12px;padding:14px;">🔍 Detection Engine<br/><span style="font-weight:400;color:#94a3b8">SQL • XSS • Path • CMD • Rate</span></div>
+        <div class="arch-arrow" style="display:flex;gap:60px">↙&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↘</div>
+        <div class="arch-row">
+          <div class="arch-box" style="background:rgba(239,68,68,0.15);border:1px solid #ef444444;color:#fca5a5;min-width:120px;font-size:13px;">🚫 BLOCK<br/><span style="font-weight:400;color:#94a3b8;font-size:11px">Log to DB</span></div>
+          <div class="arch-box" style="background:rgba(34,197,94,0.15);border:1px solid #22c55e44;color:#86efac;min-width:120px;font-size:13px;">✅ ALLOW<br/><span style="font-weight:400;color:#94a3b8;font-size:11px">Forward App</span></div>
+        </div>
+        <div class="arch-arrow">↓</div>
+        <div class="arch-box" style="background:rgba(59,130,246,0.15);border:1px solid #3b82f644;color:#93c5fd;font-size:13px;">📊 React Dashboard</div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="list">
+        <div class="list-item"><div class="list-icon">⚡</div><div><div class="list-title">Real-Time Detection</div><div class="list-desc">Every request scanned in under 10ms</div></div></div>
+        <div class="list-item"><div class="list-icon">🔒</div><div><div class="list-title">5 Attack Types Covered</div><div class="list-desc">SQL, XSS, Path Traversal, CMD Injection, DDoS</div></div></div>
+        <div class="list-item"><div class="list-icon">📊</div><div><div class="list-title">Live Dashboard</div><div class="list-desc">React.js dashboard with live charts and threat feed</div></div></div>
+        <div class="list-item"><div class="list-icon">🌍</div><div><div class="list-title">Deployed Online</div><div class="list-desc">chinnu2523.github.io/waf-dashboard</div></div></div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-num">3 / 10</div>
+</div>
+
+<!-- ─── SLIDE 4: Modules ──────────────────────────────────────────── -->
+<div class="slide">
+  <div class="sec-label">Module Breakdown</div>
+  <div class="sec-title">6 Core Modules</div>
+  <div class="list">
+    <div class="list-item"><div class="list-icon">🌐</div><div><div class="list-title">Module 1: Traffic Interception <span class="badge done">✅ Done</span></div><div class="list-desc">Reverse proxy that captures all incoming HTTP requests before they reach the application</div></div></div>
+    <div class="list-item"><div class="list-icon">🔍</div><div><div class="list-title">Module 2: Attack Detection <span class="badge done">✅ Done</span></div><div class="list-desc">Multi-layer scanner: SQL Injection, XSS, Path Traversal, Command Injection, Rate Limiting</div></div></div>
+    <div class="list-item"><div class="list-icon">📋</div><div><div class="list-title">Module 3: Logging & Analytics <span class="badge done">✅ Done</span></div><div class="list-desc">Records every request (blocked/allowed) with IP, timestamp, attack type into database</div></div></div>
+    <div class="list-item"><div class="list-icon">📊</div><div><div class="list-title">Module 4: Dashboard & Visualization <span class="badge done">✅ Done</span></div><div class="list-desc">React.js real-time dashboard with live charts, threat feed, rules manager and settings</div></div></div>
+    <div class="list-item"><div class="list-icon">⚙️</div><div><div class="list-title">Module 5: Rules Management <span class="badge wip">🔄 In Progress</span></div><div class="list-desc">Admin panel to enable/disable rules and customize thresholds</div></div></div>
+    <div class="list-item"><div class="list-icon">📄</div><div><div class="list-title">Module 6: Reporting <span class="badge planned">📅 Review 2</span></div><div class="list-desc">PDF/CSV export, email alerts for critical attacks</div></div></div>
+  </div>
+  <div class="slide-num">4 / 10</div>
+</div>
+
+<!-- ─── SLIDE 5: Database ─────────────────────────────────────────── -->
+<div class="slide">
+  <div class="sec-label">Database Design</div>
+  <div class="sec-title">4 Database Tables</div>
+  <div class="two-col">
+    <div class="col">
+      <div style="font-size:13px;color:#3b82f6;font-weight:700;margin-bottom:8px;">📋 Table 1: requests</div>
+      <table style="margin-bottom:16px;">
+        <tr><th>Column</th><th>Type</th><th>Description</th></tr>
+        <tr><td>id</td><td>INTEGER PK</td><td>Unique ID</td></tr>
+        <tr><td>ip_address</td><td>VARCHAR</td><td>Client IP</td></tr>
+        <tr><td>method</td><td>VARCHAR</td><td>GET/POST</td></tr>
+        <tr><td>path</td><td>VARCHAR</td><td>URL path</td></tr>
+        <tr><td>status</td><td>VARCHAR</td><td>ALLOWED/BLOCKED</td></tr>
+        <tr><td>timestamp</td><td>DATETIME</td><td>When made</td></tr>
+      </table>
+      <div style="font-size:13px;color:#a855f7;font-weight:700;margin-bottom:8px;">⚙️ Table 3: rules</div>
+      <table>
+        <tr><th>Column</th><th>Type</th><th>Description</th></tr>
+        <tr><td>id</td><td>INTEGER PK</td><td>Unique ID</td></tr>
+        <tr><td>name</td><td>VARCHAR</td><td>Rule name</td></tr>
+        <tr><td>enabled</td><td>BOOLEAN</td><td>Active?</td></tr>
+        <tr><td>hits</td><td>INTEGER</td><td>Times triggered</td></tr>
+      </table>
+    </div>
+    <div class="col">
+      <div style="font-size:13px;color:#ef4444;font-weight:700;margin-bottom:8px;">🚨 Table 2: threats</div>
+      <table style="margin-bottom:16px;">
+        <tr><th>Column</th><th>Type</th><th>Description</th></tr>
+        <tr><td>id</td><td>INTEGER PK</td><td>Unique ID</td></tr>
+        <tr><td>request_id</td><td>FK</td><td>→ requests.id</td></tr>
+        <tr><td>attack_type</td><td>VARCHAR</td><td>SQL/XSS/etc</td></tr>
+        <tr><td>severity</td><td>VARCHAR</td><td>critical/high</td></tr>
+        <tr><td>ip_address</td><td>VARCHAR</td><td>Attacker IP</td></tr>
+        <tr><td>blocked_at</td><td>DATETIME</td><td>Block time</td></tr>
+      </table>
+      <div style="font-size:13px;color:#22c55e;font-weight:700;margin-bottom:8px;">📈 Table 4: stats</div>
+      <table>
+        <tr><th>Column</th><th>Type</th><th>Description</th></tr>
+        <tr><td>date</td><td>DATE</td><td>Stats date</td></tr>
+        <tr><td>total_requests</td><td>INTEGER</td><td>Total count</td></tr>
+        <tr><td>blocked</td><td>INTEGER</td><td>Blocked count</td></tr>
+        <tr><td>top_attack</td><td>VARCHAR</td><td>Most common</td></tr>
+      </table>
+    </div>
+  </div>
+  <div class="slide-num">5 / 10</div>
+</div>
+
+<!-- ─── SLIDE 6: Tech Stack ───────────────────────────────────────── -->
+<div class="slide">
+  <div class="sec-label">Technology Setup</div>
+  <div class="sec-title">Technology Stack</div>
+  <div class="cards">
+    <div class="card blue">
+      <div class="card-icon">⚛️</div>
+      <div class="card-title">Frontend</div>
+      <div class="card-text" style="margin-top:8px;line-height:2">
+        React.js v19<br/>Recharts (Charts)<br/>Lucide React (Icons)<br/>Axios (API calls)<br/>GitHub Pages (Deploy)
+      </div>
+    </div>
+    <div class="card green">
+      <div class="card-icon">🟢</div>
+      <div class="card-title">Backend</div>
+      <div class="card-text" style="margin-top:8px;line-height:2">
+        Node.js v18+<br/>Express.js<br/>Helmet.js<br/>Morgan (Logging)<br/>CORS
+      </div>
+    </div>
+    <div class="card purple">
+      <div class="card-icon">🗄️</div>
+      <div class="card-title">Database</div>
+      <div class="card-text" style="margin-top:8px;line-height:2">
+        SQLite (Current)<br/>MongoDB (Review 2)<br/>In-memory logging<br/>JSON API responses
+      </div>
+    </div>
+    <div class="card yellow">
+      <div class="card-icon">🛠️</div>
+      <div class="card-title">Dev Tools</div>
+      <div class="card-text" style="margin-top:8px;line-height:2">
+        VS Code<br/>Git & GitHub<br/>npm<br/>curl (Testing)<br/>SSH (Deployment)
+      </div>
+    </div>
+  </div>
+  <div class="slide-num">6 / 10</div>
+</div>
+
+<!-- ─── SLIDE 7: UI Screens ───────────────────────────────────────── -->
+<div class="slide">
+  <div class="sec-label">Basic UI Screens</div>
+  <div class="sec-title">5 Dashboard Pages Built</div>
+  <div class="cards">
+    <div class="card blue"><div class="card-icon">📊</div><div class="card-title">Dashboard</div><div class="card-text">KPI cards, live traffic chart, latency monitor, protection layers</div></div>
+    <div class="card red"><div class="card-icon">🚨</div><div class="card-title">Threats</div><div class="card-text">Real-time threat feed with severity badges, IP address, attack patterns</div></div>
+    <div class="card purple"><div class="card-icon">📈</div><div class="card-title">Analytics</div><div class="card-text">Traffic line chart, attack type bar chart, block rate percentage</div></div>
+    <div class="card green"><div class="card-icon">⚙️</div><div class="card-title">Rules</div><div class="card-text">Toggle firewall rules on/off with live hit counters per rule</div></div>
+    <div class="card yellow"><div class="card-icon">🔧</div><div class="card-title">Settings</div><div class="card-text">Rate limit config, block duration, WAF mode selector</div></div>
+  </div>
+  <div style="margin-top:20px; background:rgba(34,197,94,0.1); border:1px solid rgba(34,197,94,0.3); border-radius:12px; padding:14px 20px; display:flex; align-items:center; gap:12px;">
+    <span style="font-size:20px">🌍</span>
+    <div>
+      <div style="font-size:13px;color:#22c55e;font-weight:700;">Live Demo Available</div>
+      <div style="font-size:13px;color:#94a3b8;">https://chinnu2523.github.io/waf-dashboard</div>
+    </div>
+  </div>
+  <div class="slide-num">7 / 10</div>
+</div>
+
+<!-- ─── SLIDE 8: Working Module Demo ─────────────────────────────── -->
+<div class="slide">
+  <div class="sec-label">Working Module</div>
+  <div class="sec-title">Attack Detection — Live Demo</div>
+  <div class="two-col">
+    <div class="col">
+      <div style="font-size:13px;color:#94a3b8;margin-bottom:10px;">Normal Request — ✅ ALLOWED</div>
+      <div class="code">
+        <span class="blue">curl</span> http://localhost:4000/api/data<br/><br/>
+        <span class="gray">Response:</span><br/>
+        {"message": <span style="color:#fbbf24">"Protected data —<br/>&nbsp;you passed the WAF!"</span>}
+      </div>
+      <br/>
+      <div style="font-size:13px;color:#94a3b8;margin-bottom:10px;">SQL Injection — 🛑 BLOCKED</div>
+      <div class="code">
+        <span class="blue">curl</span> <span class="red">"localhost:4000/api/users<br/>&nbsp;?id=1' OR '1'='1"</span><br/><br/>
+        <span class="gray">Response:</span><br/>
+        {"error": <span class="red">"Forbidden"</span>,<br/>&nbsp;"message": <span class="red">"SQL injection<br/>&nbsp;detected and blocked"</span>}
+      </div>
+    </div>
+    <div class="col">
+      <div style="font-size:13px;color:#94a3b8;margin-bottom:10px;">XSS Attack — 🛑 BLOCKED</div>
+      <div class="code">
+        <span class="blue">curl</span> <span class="red">"localhost:4000/api/data<br/>&nbsp;?name=&lt;script&gt;alert(1)&lt;/script&gt;"</span><br/><br/>
+        <span class="gray">Response:</span><br/>
+        {"error": <span class="red">"Forbidden"</span>,<br/>&nbsp;"message": <span class="red">"XSS attempt<br/>&nbsp;detected and blocked"</span>}
+      </div>
+      <br/>
+      <div style="font-size:13px;color:#94a3b8;margin-bottom:10px;">Live Stats API</div>
+      <div class="code">
+        <span class="blue">curl</span> http://localhost:4000/api/stats<br/><br/>
+        {"total": <span style="color:#a855f7">142</span>,<br/>&nbsp;"blocked": <span class="red">47</span>,<br/>&nbsp;"allowed": <span style="color:#4ade80">95</span>,<br/>&nbsp;"blockRate": <span style="color:#fbbf24">"33.1"</span>}
+      </div>
+    </div>
+  </div>
+  <div class="slide-num">8 / 10</div>
+</div>
+
+<!-- ─── SLIDE 9: Progress ─────────────────────────────────────────── -->
+<div class="slide">
+  <div class="sec-label">Project Progress</div>
+  <div class="sec-title">Current Status & Future Plan</div>
+  <div class="two-col">
+    <div class="col">
+      <div style="font-size:14px;font-weight:700;color:#f1f5f9;margin-bottom:16px;">📊 Review 1 Progress</div>
+      <div class="prog"><div class="prog-label"><span>Problem Statement</span><span style="color:#22c55e">100%</span></div><div class="prog-bar"><div class="prog-fill" style="width:100%;background:#22c55e"></div></div></div>
+      <div class="prog"><div class="prog-label"><span>Database Design</span><span style="color:#22c55e">100%</span></div><div class="prog-bar"><div class="prog-fill" style="width:100%;background:#22c55e"></div></div></div>
+      <div class="prog"><div class="prog-label"><span>Attack Detection</span><span style="color:#22c55e">100%</span></div><div class="prog-bar"><div class="prog-fill" style="width:100%;background:#22c55e"></div></div></div>
+      <div class="prog"><div class="prog-label"><span>Frontend Dashboard</span><span style="color:#22c55e">100%</span></div><div class="prog-bar"><div class="prog-fill" style="width:100%;background:#22c55e"></div></div></div>
+      <div class="prog"><div class="prog-label"><span>Backend API</span><span style="color:#22c55e">100%</span></div><div class="prog-bar"><div class="prog-fill" style="width:100%;background:#22c55e"></div></div></div>
+      <div class="prog"><div class="prog-label"><span>Deployment</span><span style="color:#22c55e">100%</span></div><div class="prog-bar"><div class="prog-fill" style="width:100%;background:#22c55e"></div></div></div>
+      <div class="prog"><div class="prog-label"><span>ML Integration</span><span style="color:#475569">0%</span></div><div class="prog-bar"><div class="prog-fill" style="width:0%;background:#a855f7"></div></div></div>
+      <div class="prog"><div class="prog-label"><span>Reporting Module</span><span style="color:#475569">0%</span></div><div class="prog-bar"><div class="prog-fill" style="width:0%;background:#3b82f6"></div></div></div>
+      <div style="margin-top:12px;padding:10px 14px;background:rgba(34,197,94,0.1);border-radius:8px;border:1px solid rgba(34,197,94,0.3);">
+        <span style="color:#22c55e;font-weight:700;">Overall: 70% Complete ✅</span>
+      </div>
+    </div>
+    <div class="col">
+      <div style="font-size:14px;font-weight:700;color:#f1f5f9;margin-bottom:16px;">🚀 Review 2 Future Plan</div>
+      <div class="list">
+        <div class="list-item"><div class="list-icon">🤖</div><div><div class="list-title">Machine Learning</div><div class="list-desc">Anomaly detection using Isolation Forest algorithm</div></div></div>
+        <div class="list-item"><div class="list-icon">🗄️</div><div><div class="list-title">MongoDB Integration</div><div class="list-desc">Persistent database for all logs and threats</div></div></div>
+        <div class="list-item"><div class="list-icon">📧</div><div><div class="list-title">Email Alerts</div><div class="list-desc">Instant alerts for critical severity attacks</div></div></div>
+        <div class="list-item"><div class="list-icon">📄</div><div><div class="list-title">PDF Reports</div><div class="list-desc">Generate and download security reports</div></div></div>
+        <div class="list-item"><div class="list-icon">☁️</div><div><div class="list-title">Full Cloud Deploy</div><div class="list-desc">Backend on Render.com, full stack online</div></div></div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-num">9 / 10</div>
+</div>
+
+<!-- ─── SLIDE 10: Thank You ───────────────────────────────────────── -->
+<div class="slide" style="text-align:center;align-items:center;">
+  <div style="font-size:64px;margin-bottom:16px;">🛡️</div>
+  <div class="title-main" style="font-size:44px;">Thank You!</div>
+  <div class="title-sub" style="margin-bottom:32px;">Smart Web Application Firewall — Review 1</div>
+  <div class="cards" style="max-width:700px;">
+    <div class="card blue" style="text-align:left">
+      <div class="card-icon">🌍</div>
+      <div class="card-title">Live Demo</div>
+      <div class="card-text">chinnu2523.github.io/waf-dashboard</div>
+    </div>
+    <div class="card green" style="text-align:left">
+      <div class="card-icon">💻</div>
+      <div class="card-title">Source Code</div>
+      <div class="card-text">github.com/chinnu2523/waf-dashboard</div>
+    </div>
+    <div class="card purple" style="text-align:left">
+      <div class="card-icon">📊</div>
+      <div class="card-title">Backend API</div>
+      <div class="card-text">localhost:4000/api/stats</div>
+    </div>
+  </div>
+  <div style="margin-top:36px;font-size:20px;color:#475569;">❓ Questions Welcome!</div>
+  <div class="slide-num">10 / 10</div>
+</div>
+
+<!-- Navigation -->
+<div class="nav">
+  <button class="btn-prev" onclick="changeSlide(-1)">← Prev</button>
+  <div class="nav-dots" id="dots"></div>
+  <button class="btn-next" onclick="changeSlide(1)">Next →</button>
+</div>
+
+<script>
+  let cur = 0;
+  const slides = document.querySelectorAll('.slide');
+  const dotsEl = document.getElementById('dots');
+
+  // Build dots
+  slides.forEach((_, i) => {
+    const d = document.createElement('div');
+    d.className = 'dot' + (i === 0 ? ' active' : '');
+    d.onclick = () => goTo(i);
+    dotsEl.appendChild(d);
+  });
+
+  function goTo(n) {
+    slides[cur].classList.remove('active');
+    document.querySelectorAll('.dot')[cur].classList.remove('active');
+    cur = (n + slides.length) % slides.length;
+    slides[cur].classList.add('active');
+    document.querySelectorAll('.dot')[cur].classList.add('active');
+  }
+
+  function changeSlide(dir) { goTo(cur + dir); }
+
+  // Keyboard navigation
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') changeSlide(1);
+    if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   changeSlide(-1);
+  });
+</script>
+</body>
+</html>
